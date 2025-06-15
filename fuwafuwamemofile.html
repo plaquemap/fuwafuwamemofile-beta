@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>浮遊メモアプリ</title>
+    <meta name="description" content="雲のように浮遊する美しいメモアプリ">
+    <meta name="theme-color" content="#4facfe">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'メイリオ', Meiryo, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        .app-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: default;
+        }
+        
+        .background-scene1 {
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+        }
+        
+        .background-scene2 {
+            background: linear-gradient(to bottom, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .floating-word {
+            position: absolute;
+            cursor: pointer;
+            font-weight: bold;
+            color: #000;
+            font-family: 'Hiragino Sans', 'ヒラギノ角ゴ ProN W3', 'Hiragino Kaku Gothic ProN', 'メイリオ', Meiryo, sans-serif;
+            transition: all 0.1s ease;
+            pointer-events: auto;
+            z-index: 5;
+        }
+        
+        .floating-file {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            pointer-events: auto;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            min-width: 80px;
+            max-width: 120px;
+        }
+        
+        .file-thumbnail {
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: #f0f0f0;
+        }
+        
+        .file-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .file-name {
+            font-size: 10px;
+            text-align: center;
+            word-break: break-all;
+            line-height: 1.2;
+            color: #333;
+            font-weight: normal;
+        }
+        
+        .file-tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 25;
+            white-space: nowrap;
+            display: none;
+        }
+        
+        .settings-gear {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 15;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        
+        .settings-gear:hover {
+            transform: rotate(90deg);
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        .settings-gear svg {
+            width: 24px;
+            height: 24px;
+            fill: #666;
+        }
+        
+        .control-panel {
+            position: absolute;
+            top: 70px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            z-index: 10;
+            max-width: 280px;
+            min-width: 250px;
+        }
+        
+        .control-panel.hidden {
+            display: none !important;
+        }
+        
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .text-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-input-button {
+            flex: 1;
+            min-width: 150px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            text-align: left;
+            color: #666;
+        }
+        
+        .file-input-button:hover {
+            background: #f8f9fa;
+        }
+        
+        .add-button {
+            padding: 8px 16px;
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .add-button:hover {
+            background: #0056CC;
+        }
+        
+        .reset-button {
+            width: 100%;
+            padding: 8px;
+            background: #FF3B30;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .reset-button:hover {
+            background: #D70015;
+        }
+        
+        .toggle-button {
+            width: 100%;
+            padding: 8px;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .background-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 20;
+            overflow: hidden;
+        }
+        
+        .context-menu button {
+            display: block;
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .context-menu button:hover {
+            background: #f5f5f5;
+        }
+        
+        .context-menu .delete-option {
+            color: #FF3B30;
+        }
+        
+        .word-count {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            max-width: 280px;
+            line-height: 1.4;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .selected-file-name {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            word-break: break-all;
+            line-height: 1.3;
+            padding: 4px 8px;
+            background: rgba(0, 123, 255, 0.1);
+            border-radius: 4px;
+            display: none;
+        }
+        
+        @media (max-width: 600px) {
+            .control-panel {
+                top: 60px;
+                right: 5px;
+                left: 5px;
+                max-width: none;
+                min-width: auto;
+                padding: 10px;
+                font-size: 14px;
+            }
+            
+            .settings-gear {
+                top: 10px;
+                right: 10px;
+                width: 36px;
+                height: 36px;
+            }
+            
+            .settings-gear svg {
+                width: 20px;
+                height: 20px;
+            }
+            
+            .word-count {
+                bottom: 5px;
+                right: 5px;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .input-row {
+                flex-direction: column;
+            }
+            
+            .text-input {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .background-options {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container background-scene1" id="appContainer">
+        <!-- 歯車設定ボタン -->
+        <div class="settings-gear" id="settingsGear">
+            <svg viewBox="0 0 24 24">
+                <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+            </svg>
+        </div>
+
+        <!-- コントロールパネル -->
+        <div class="control-panel hidden" id="controlPanel">
+            <div class="input-row">
+                <input type="text" class="text-input" id="textInput" placeholder="単語や短文を入力...">
+                <button class="add-button" id="addButton">追加</button>
+            </div>
+            
+            <div class="input-row">
+                <input type="file" class="file-input" id="fileInput" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                <button type="button" class="file-input-button" id="fileInputButton">ファイルの選択</button>
+                <button class="add-button" id="addFileButton">書類追加</button>
+            </div>
+            <div class="selected-file-name" id="selectedFileName"></div>
+            <div style="font-size: 10px; color: #999; margin-bottom: 8px;">
+                ※書類は5MB以下、10個まで
+            </div>
+            
+            <div class="background-options">
+                <label>
+                    <input type="radio" name="background" value="scene1" checked> Scene 1
+                </label>
+                <label>
+                    <input type="radio" name="background" value="scene2"> Scene 2
+                </label>
+            </div>
+            
+            <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">速度調整</label>
+                <input type="range" id="speedControl" min="0" max="0.25" step="0.01" value="0.025" 
+                       style="width: 100%; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #999;">
+                    <span>停止</span>
+                    <span>そっと</span>
+                    <span>ゆっくり</span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 12px; color: #666; margin-bottom: 5px;">文字サイズ</label>
+                <input type="range" id="fontSizeControl" min="12" max="30" step="1" value="16" 
+                       style="width: 100%; margin-bottom: 5px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; color: #999;">
+                    <span>小さく</span>
+                    <span>普通</span>
+                    <span>大きく</span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 8px;">
+                <button id="resetButton" class="reset-button" onclick="window.app && window.app.handleResetClick()">
+                    すべてリセット
+                </button>
+                <button id="autoResetToggle" class="toggle-button" onclick="window.app && window.app.handleToggleClick()">
+                    毎日0時削除: OFF
+                </button>
+                <div style="font-size: 10px; color: #999; margin-top: 2px;">
+                    ※絵文字は30分おきに自動追加（最大5個、古いものと入れ替え）
+                </div>
+            </div>
+            
+            <div class="help-text">
+                単語を長押し/右クリック → 消去/固定
+            </div>
+        </div>
+
+        <!-- 右クリックメニュー -->
+        <div class="context-menu" id="contextMenu" style="display: none;">
+            <button id="pinAction">置いておく（固定）</button>
+            <button id="unpinAction" style="display: none;">浮かせる</button>
+            <button id="downloadAction" style="display: none;">ダウンロード</button>
+            <button id="deleteAction" class="delete-option">消す</button>
+        </div>
+
+        <!-- ファイルツールチップ -->
+        <div class="file-tooltip" id="fileTooltip"></div>
+
+        <!-- 単語数表示 -->
+        <div class="word-count" id="wordCount">登録数: 0</div>
+    </div>
+
+    <script>
+        class FloatingMemoApp {
+            constructor() {
+                this.words = [];
+                this.files = []; // ファイル用の配列を追加
+                this.deletedWords = []; // 消去した単語の履歴
+                this.currentWordId = null;
+                this.currentFileId = null;
+                this.animationId = null;
+                this.speedMultiplier = 0.025;
+                this.baseFontSize = 16;
+                this.emojiTimer = null;
+                this.midnightTimer = null;
+                this.autoResetEnabled = false; // 毎日0時自動削除のON/OFF
+                this.emojiList = ['🐟', '⚽', '⭐', '🌙', '🌸', '🦋', '🍀', '🎈', '🎯', '🎮'];
+                this.maxEmojis = 5; // 最大絵文字数
+                this.init();
+            }
+
+            init() {
+                this.loadData();
+                this.loadInitialWords();
+                this.setupEventListeners();
+                this.startAnimation();
+                this.startEmojiTimer();
+                this.startMidnightTimer();
+            }
+
+            generateRandomColor() {
+                const hue = Math.floor(Math.random() * 360);
+                const saturation = Math.floor(Math.random() * 40) + 60;
+                const lightness = Math.floor(Math.random() * 30) + 25;
+                return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+            }
+
+            loadInitialWords() {
+                if (this.words.length === 0) {
+                    this.words = [
+                        {
+                            id: 1,
+                            text: 'ようこそ',
+                            x: 15,
+                            y: 15,
+                            size: this.baseFontSize,
+                            vx: 0.8,
+                            vy: 0.4,
+                            pinned: false,
+                            color: this.generateRandomColor(),
+                            isEmoji: false
+                        },
+                        {
+                            id: 2,
+                            text: 'ふわふわメモアプリへ',
+                            x: 55,
+                            y: 25,
+                            size: this.baseFontSize - 1,
+                            vx: -0.6,
+                            vy: 0.7,
+                            pinned: false,
+                            color: this.generateRandomColor(),
+                            isEmoji: false
+                        },
+                        {
+                            id: 3,
+                            text: '言葉を追加するには右上の歯車を',
+                            x: 25,
+                            y: 55,
+                            size: this.baseFontSize - 2,
+                            vx: 0.5,
+                            vy: -0.6,
+                            pinned: false,
+                            color: this.generateRandomColor(),
+                            isEmoji: false
+                        },
+                        {
+                            id: 4,
+                            text: '言葉を消すには言葉を捕まえて右クリック',
+                            x: 35,
+                            y: 75,
+                            size: this.baseFontSize - 3,
+                            vx: -0.4,
+                            vy: 0.5,
+                            pinned: false,
+                            color: this.generateRandomColor(),
+                            isEmoji: false
+                        }
+                    ];
+                    this.saveData();
+                }
+                this.updateDisplay();
+            }
+
+            addEmoji() {
+                if (this.words.length >= 10) {
+                    const currentEmojis = this.words.filter(w => w.isEmoji);
+                    
+                    // 5個を超える場合は古い絵文字をランダムに削除
+                    if (currentEmojis.length >= this.maxEmojis) {
+                        const randomIndex = Math.floor(Math.random() * currentEmojis.length);
+                        const emojiToRemove = currentEmojis[randomIndex];
+                        this.words = this.words.filter(w => w.id !== emojiToRemove.id);
+                    }
+                    
+                    const randomEmoji = this.emojiList[Math.floor(Math.random() * this.emojiList.length)];
+                    
+                    const newEmoji = {
+                        id: Date.now(),
+                        text: randomEmoji,
+                        x: Math.random() * 80 + 10,
+                        y: Math.random() * 70 + 10,
+                        size: this.baseFontSize + 8,
+                        vx: (Math.random() - 0.5) * 1.5,
+                        vy: (Math.random() - 0.5) * 1.5,
+                        pinned: false,
+                        color: '#000',
+                        isEmoji: true
+                    };
+
+                    this.words.push(newEmoji);
+                    this.saveData();
+                    this.updateDisplay();
+                }
+            }
+
+            startEmojiTimer() {
+                // 30分間隔で絵文字を追加
+                this.emojiTimer = setInterval(() => {
+                    this.addEmoji();
+                }, 1800000); // 30分 = 1800000ミリ秒
+            }
+
+            startMidnightTimer() {
+                // 毎日0時にチェックするタイマー
+                const checkMidnight = () => {
+                    const now = new Date();
+                    if (this.autoResetEnabled && now.getHours() === 0 && now.getMinutes() === 0) {
+                        this.resetAll();
+                    }
+                };
+                
+                // 1分ごとにチェック
+                this.midnightTimer = setInterval(checkMidnight, 60000);
+            }
+
+            handleResetClick() {
+                console.log('リセットボタンクリック（直接）');
+                if (confirm('すべての単語と絵文字を削除しますか？')) {
+                    this.resetAll();
+                }
+            }
+
+            handleToggleClick() {
+                console.log('自動リセット切り替えクリック（直接）');
+                this.toggleAutoReset();
+            }
+
+            resetAll() {
+                console.log('resetAll実行開始');
+                this.words = [];
+                this.files = [];
+                this.deletedWords = [];
+                this.saveData();
+                this.updateDisplay();
+                this.clearSelectedFileName();
+                console.log('すべてリセットしました - 単語数:', this.words.length, 'ファイル数:', this.files.length);
+                
+                // 確実に画面から要素を削除
+                document.querySelectorAll('.floating-word').forEach(el => {
+                    el.remove();
+                });
+                document.querySelectorAll('.floating-file').forEach(el => {
+                    el.remove();
+                });
+            }
+
+            toggleAutoReset() {
+                this.autoResetEnabled = !this.autoResetEnabled;
+                console.log('自動リセット切り替え:', this.autoResetEnabled);
+                this.saveData();
+                this.updateAutoResetButton();
+            }
+
+            updateAutoResetButton() {
+                const button = document.getElementById('autoResetToggle');
+                console.log('ボタン更新:', button, '状態:', this.autoResetEnabled);
+                if (button) {
+                    button.textContent = this.autoResetEnabled ? '毎日0時削除: ON' : '毎日0時削除: OFF';
+                    button.style.backgroundColor = this.autoResetEnabled ? '#34C759' : '#FF3B30';
+                    console.log('ボタン更新完了:', button.textContent, button.style.backgroundColor);
+                } else {
+                    console.error('autoResetToggleボタンが見つかりません');
+                }
+            }
+
+            addWord() {
+                const textInput = document.getElementById('textInput');
+                const text = textInput.value.trim();
+                
+                if (!text) return;
+
+                const newWord = {
+                    id: Date.now(),
+                    text: text,
+                    x: Math.random() * 80 + 10,
+                    y: Math.random() * 70 + 10,
+                    size: this.baseFontSize,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    pinned: false,
+                    color: this.generateRandomColor(),
+                    isEmoji: false
+                };
+
+                this.words.push(newWord);
+                textInput.value = '';
+                this.saveData();
+                this.updateDisplay();
+            }
+
+            addFile() {
+                const fileInput = document.getElementById('fileInput');
+                const file = fileInput.files[0];
+                
+                if (!file) return;
+
+                // 書類数制限チェック (10個まで)
+                if (this.files.length >= 10) {
+                    alert('これ以上はあなたの荷が重いです！\n書類は10個までです。');
+                    return;
+                }
+
+                // ファイルサイズチェック (5MB制限)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('これ以上はあなたの荷が重いです！\nファイルサイズは5MB以下にしてください。');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const newFile = {
+                        id: Date.now(),
+                        name: file.name,
+                        type: file.type,
+                        data: e.target.result,
+                        x: Math.random() * 80 + 10,
+                        y: Math.random() * 70 + 10,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        pinned: false,
+                        isFile: true
+                    };
+
+                    this.files.push(newFile);
+                    fileInput.value = '';
+                    this.clearSelectedFileName();
+                    this.saveData();
+                    this.updateDisplay();
+                };
+                reader.readAsDataURL(file);
+            }
+
+            showSelectedFileName(fileName) {
+                const selectedFileName = document.getElementById('selectedFileName');
+                if (selectedFileName) {
+                    selectedFileName.textContent = `選択されたファイル: ${fileName}`;
+                    selectedFileName.style.display = 'block';
+                }
+            }
+
+            clearSelectedFileName() {
+                const selectedFileName = document.getElementById('selectedFileName');
+                if (selectedFileName) {
+                    selectedFileName.textContent = '';
+                    selectedFileName.style.display = 'none';
+                }
+            }
+
+            getFileIcon(fileName, fileType) {
+                const ext = fileName.split('.').pop().toLowerCase();
+                
+                if (fileType.startsWith('image/')) {
+                    return { type: 'image', icon: '🖼️' };
+                } else if (ext === 'pdf') {
+                    return { type: 'icon', icon: '📄' };
+                } else if (ext === 'txt') {
+                    return { type: 'icon', icon: '📝' };
+                } else if (['doc', 'docx'].includes(ext)) {
+                    return { type: 'icon', icon: '📄' };
+                } else {
+                    return { type: 'icon', icon: '📎' };
+                }
+            }
+
+            downloadFile(fileId) {
+                const file = this.files.find(f => f.id === fileId);
+                if (!file) return;
+
+                const link = document.createElement('a');
+                link.href = file.data;
+                link.download = file.name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            setupEventListeners() {
+                const textInput = document.getElementById('textInput');
+                const addButton = document.getElementById('addButton');
+                const fileInput = document.getElementById('fileInput');
+                const fileInputButton = document.getElementById('fileInputButton');
+                const addFileButton = document.getElementById('addFileButton');
+                const appContainer = document.getElementById('appContainer');
+                const settingsGear = document.getElementById('settingsGear');
+                const controlPanel = document.getElementById('controlPanel');
+
+                if (settingsGear && controlPanel) {
+                    settingsGear.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        controlPanel.classList.toggle('hidden');
+                    });
+                }
+
+                if (addButton && textInput) {
+                    addButton.addEventListener('click', () => this.addWord());
+                    textInput.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') this.addWord();
+                    });
+                }
+
+                if (addFileButton && fileInput && fileInputButton) {
+                    // ファイル選択ボタンをクリックした時に、非表示のfile inputをクリック
+                    fileInputButton.addEventListener('click', () => {
+                        fileInput.click();
+                    });
+                    
+                    addFileButton.addEventListener('click', () => this.addFile());
+                    
+                    // ファイル選択時にファイル名を表示
+                    fileInput.addEventListener('change', (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                            this.showSelectedFileName(file.name);
+                        } else {
+                            this.clearSelectedFileName();
+                        }
+                    });
+                }
+
+                document.querySelectorAll('input[name="background"]').forEach(radio => {
+                    radio.addEventListener('change', (e) => this.changeBackground(e.target.value));
+                });
+
+                const speedControl = document.getElementById('speedControl');
+                if (speedControl) {
+                    speedControl.value = this.speedMultiplier;
+                    speedControl.addEventListener('input', (e) => {
+                        this.speedMultiplier = parseFloat(e.target.value);
+                    });
+                }
+
+                const fontSizeControl = document.getElementById('fontSizeControl');
+                if (fontSizeControl) {
+                    fontSizeControl.addEventListener('input', (e) => {
+                        this.baseFontSize = parseInt(e.target.value);
+                    });
+                }
+
+                const emojiInterval = document.getElementById('emojiInterval');
+                if (emojiInterval) {
+                    emojiInterval.addEventListener('change', (e) => {
+                        const newInterval = parseInt(e.target.value);
+                        this.restartEmojiTimer(newInterval);
+                    });
+                }
+
+                if (appContainer && controlPanel) {
+                    appContainer.addEventListener('click', (e) => {
+                        if (!e.target.closest('.floating-word') && 
+                            !e.target.closest('.floating-file') &&
+                            !e.target.closest('.context-menu') && 
+                            !e.target.closest('.control-panel') && 
+                            !e.target.closest('.settings-gear')) {
+                            this.hideContextMenu();
+                            controlPanel.classList.add('hidden');
+                        }
+                    });
+                }
+
+                if (appContainer) {
+                    appContainer.addEventListener('touchstart', this.handleTouchStart.bind(this));
+                    appContainer.addEventListener('touchend', this.handleTouchEnd.bind(this));
+                }
+
+                const pinAction = document.getElementById('pinAction');
+                const unpinAction = document.getElementById('unpinAction');
+                const deleteAction = document.getElementById('deleteAction');
+                const downloadAction = document.getElementById('downloadAction');
+                if (pinAction) pinAction.addEventListener('click', () => this.pinWord());
+                if (unpinAction) unpinAction.addEventListener('click', () => this.unpinWord());
+                if (deleteAction) deleteAction.addEventListener('click', () => this.deleteWord());
+                if (downloadAction) downloadAction.addEventListener('click', () => this.downloadCurrentFile());
+            }
+
+            handleTouchStart(e) {
+                const word = e.target.closest('.floating-word');
+                const file = e.target.closest('.floating-file');
+                if (word || file) {
+                    this.touchTimer = setTimeout(() => {
+                        const element = word || file;
+                        const id = word ? element.dataset.wordId : element.dataset.fileId;
+                        this.showContextMenu(e, id, !!file);
+                    }, 500);
+                }
+            }
+
+            handleTouchEnd(e) {
+                if (this.touchTimer) {
+                    clearTimeout(this.touchTimer);
+                    this.touchTimer = null;
+                }
+            }
+
+            showContextMenu(e, id, isFile = false) {
+                e.preventDefault();
+                const contextMenu = document.getElementById('contextMenu');
+                const pinAction = document.getElementById('pinAction');
+                const unpinAction = document.getElementById('unpinAction');
+                const downloadAction = document.getElementById('downloadAction');
+                
+                let isPinned = false;
+                
+                if (isFile) {
+                    this.currentFileId = parseInt(id);
+                    this.currentWordId = null;
+                    const file = this.files.find(f => f.id === this.currentFileId);
+                    isPinned = file ? file.pinned : false;
+                    downloadAction.style.display = 'block';
+                } else {
+                    this.currentWordId = parseInt(id);
+                    this.currentFileId = null;
+                    const word = this.words.find(w => w.id === this.currentWordId);
+                    isPinned = word ? word.pinned : false;
+                    downloadAction.style.display = 'none';
+                }
+                
+                // 固定状態によってボタンの表示を切り替え
+                if (isPinned) {
+                    pinAction.style.display = 'none';
+                    unpinAction.style.display = 'block';
+                } else {
+                    pinAction.style.display = 'block';
+                    unpinAction.style.display = 'none';
+                }
+                
+                let x, y;
+                if (e.touches) {
+                    x = e.touches[0].clientX;
+                    y = e.touches[0].clientY;
+                } else {
+                    x = e.clientX;
+                    y = e.clientY;
+                }
+
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = x + 'px';
+                contextMenu.style.top = y + 'px';
+            }
+
+            downloadCurrentFile() {
+                if (this.currentFileId) {
+                    this.downloadFile(this.currentFileId);
+                    this.hideContextMenu();
+                }
+            }
+
+            hideContextMenu() {
+                const contextMenu = document.getElementById('contextMenu');
+                if (contextMenu) {
+                    contextMenu.style.display = 'none';
+                }
+                this.currentWordId = null;
+                this.currentFileId = null;
+            }
+
+            pinWord() {
+                if (this.currentWordId) {
+                    this.words = this.words.map(word => 
+                        word.id === this.currentWordId 
+                            ? { ...word, pinned: true, vx: 0, vy: 0 }
+                            : word
+                    );
+                } else if (this.currentFileId) {
+                    this.files = this.files.map(file => 
+                        file.id === this.currentFileId 
+                            ? { ...file, pinned: true, vx: 0, vy: 0 }
+                            : file
+                    );
+                }
+                this.hideContextMenu();
+                this.saveData();
+                this.updateDisplay();
+            }
+
+            unpinWord() {
+                if (this.currentWordId) {
+                    this.words = this.words.map(word => 
+                        word.id === this.currentWordId 
+                            ? { 
+                                ...word, 
+                                pinned: false, 
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: (Math.random() - 0.5) * 2
+                            }
+                            : word
+                    );
+                } else if (this.currentFileId) {
+                    this.files = this.files.map(file => 
+                        file.id === this.currentFileId 
+                            ? { 
+                                ...file, 
+                                pinned: false, 
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: (Math.random() - 0.5) * 2
+                            }
+                            : file
+                    );
+                }
+                this.hideContextMenu();
+                this.saveData();
+                this.updateDisplay();
+            }
+
+            deleteWord() {
+                if (this.currentWordId) {
+                    const wordToDelete = this.words.find(word => word.id === this.currentWordId);
+                    if (wordToDelete && !wordToDelete.isEmoji) {
+                        // 絵文字以外の単語のみ履歴に追加
+                        this.deletedWords.push({
+                            text: wordToDelete.text,
+                            deletedAt: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+                        });
+                        
+                        // 履歴は最大10個まで保持
+                        if (this.deletedWords.length > 10) {
+                            this.deletedWords.shift();
+                        }
+                    }
+                    
+                    this.words = this.words.filter(word => word.id !== this.currentWordId);
+                } else if (this.currentFileId) {
+                    this.files = this.files.filter(file => file.id !== this.currentFileId);
+                }
+                
+                this.hideContextMenu();
+                this.saveData();
+                this.updateDisplay();
+            }
+
+            changeBackground(type) {
+                const container = document.getElementById('appContainer');
+                container.className = `app-container background-${type}`;
+            }
+
+            updateDisplay() {
+                const container = document.getElementById('appContainer');
+                const wordCount = document.getElementById('wordCount');
+                
+                document.querySelectorAll('.floating-word').forEach(el => el.remove());
+                document.querySelectorAll('.floating-file').forEach(el => el.remove());
+
+                // 単語の表示
+                this.words.forEach(word => {
+                    const wordElement = document.createElement('div');
+                    wordElement.className = 'floating-word';
+                    wordElement.dataset.wordId = word.id;
+                    wordElement.textContent = word.text;
+                    
+                    this.updateWordStyle(wordElement, word);
+                    
+                    wordElement.addEventListener('contextmenu', (e) => this.showContextMenu(e, word.id.toString(), false));
+                    
+                    container.appendChild(wordElement);
+                });
+
+                // ファイルの表示
+                this.files.forEach(file => {
+                    const fileElement = document.createElement('div');
+                    fileElement.className = 'floating-file';
+                    fileElement.dataset.fileId = file.id;
+                    
+                    const iconInfo = this.getFileIcon(file.name, file.type);
+                    
+                    const thumbnail = document.createElement('div');
+                    thumbnail.className = 'file-thumbnail';
+                    
+                    if (iconInfo.type === 'image' && file.type.startsWith('image/')) {
+                        const img = document.createElement('img');
+                        img.src = file.data;
+                        img.alt = file.name;
+                        thumbnail.appendChild(img);
+                    } else {
+                        thumbnail.textContent = iconInfo.icon;
+                    }
+                    
+                    const fileName = document.createElement('div');
+                    fileName.className = 'file-name';
+                    fileName.textContent = file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name;
+                    
+                    fileElement.appendChild(thumbnail);
+                    fileElement.appendChild(fileName);
+                    
+                    this.updateFileStyle(fileElement, file);
+                    
+                    fileElement.addEventListener('contextmenu', (e) => this.showContextMenu(e, file.id.toString(), true));
+                    fileElement.addEventListener('mouseenter', (e) => this.showFileTooltip(e, file));
+                    fileElement.addEventListener('mouseleave', () => this.hideFileTooltip());
+                    
+                    container.appendChild(fileElement);
+                });
+
+                if (wordCount) {
+                    const normalWords = this.words.filter(w => !w.isEmoji).length;
+                    let displayText = `浮かんだ単語: ${normalWords}個`;
+                    
+                    if (this.files.length > 0) {
+                        displayText += `\n書類: ${this.files.length}個`;
+                    }
+                    
+                    if (this.deletedWords.length > 0) {
+                        const recentDeleted = this.deletedWords.slice(-3).map(d => `${d.text}(${d.deletedAt})`).join(', ');
+                        displayText += `\n消した単語: ${recentDeleted}`;
+                    }
+                    
+                    wordCount.textContent = displayText;
+                    wordCount.style.whiteSpace = 'pre-line'; // 改行を有効にする
+                }
+            }
+
+            updateWordStyle(element, word) {
+                const time = Date.now() / 1000;
+                const rotationAngle = word.pinned ? 0 : Math.sin(time + word.id) * 5;
+                const sizeVariation = Math.sin(time + word.id) * 4;
+                const currentSize = word.pinned 
+                    ? Math.max(word.size + 6, this.baseFontSize + 8) 
+                    : Math.max(word.size + sizeVariation, this.baseFontSize);
+                
+                element.style.left = `${word.x}%`;
+                element.style.top = `${word.y}%`;
+                element.style.fontSize = `${currentSize}px`;
+                
+                if (word.isEmoji) {
+                    element.style.color = 'inherit';
+                } else {
+                    element.style.color = '#000';
+                }
+                
+                element.style.transform = `rotate(${rotationAngle}deg)`;
+                element.style.fontWeight = 'bold';
+                element.style.textShadow = 'none';
+                
+                if (word.pinned) {
+                    element.style.filter = 'brightness(1.1) drop-shadow(2px 2px 4px rgba(0,0,0,0.3))';
+                } else {
+                    element.style.filter = 'drop-shadow(1px 1px 2px rgba(0,0,0,0.2))';
+                }
+            }
+
+            updateFileStyle(element, file) {
+                const time = Date.now() / 1000;
+                const rotationAngle = file.pinned ? 0 : Math.sin(time + file.id) * 3;
+                
+                element.style.left = `${file.x}%`;
+                element.style.top = `${file.y}%`;
+                element.style.transform = `rotate(${rotationAngle}deg)`;
+                
+                if (file.pinned) {
+                    element.style.filter = 'brightness(1.1) drop-shadow(2px 2px 4px rgba(0,0,0,0.3))';
+                } else {
+                    element.style.filter = 'drop-shadow(1px 1px 2px rgba(0,0,0,0.2))';
+                }
+            }
+
+            showFileTooltip(e, file) {
+                const tooltip = document.getElementById('fileTooltip');
+                tooltip.textContent = `ファイル: ${file.name}`;
+                tooltip.style.display = 'block';
+                tooltip.style.left = e.clientX + 10 + 'px';
+                tooltip.style.top = e.clientY - 30 + 'px';
+            }
+
+            hideFileTooltip() {
+                const tooltip = document.getElementById('fileTooltip');
+                tooltip.style.display = 'none';
+            }
+
+            animate() {
+                // 単語のアニメーション
+                this.words = this.words.map(word => {
+                    if (word.pinned) return word;
+
+                    let newX = word.x + (word.vx * this.speedMultiplier);
+                    let newY = word.y + (word.vy * this.speedMultiplier);
+                    let newVx = word.vx;
+                    let newVy = word.vy;
+
+                    if (newX <= 0 || newX >= 95) {
+                        newVx = -newVx;
+                        newX = Math.max(0, Math.min(95, newX));
+                    }
+                    if (newY <= 0 || newY >= 90) {
+                        newVy = -newVy;
+                        newY = Math.max(0, Math.min(90, newY));
+                    }
+
+                    return { ...word, x: newX, y: newY, vx: newVx, vy: newVy };
+                });
+
+                // ファイルのアニメーション
+                this.files = this.files.map(file => {
+                    if (file.pinned) return file;
+
+                    let newX = file.x + (file.vx * this.speedMultiplier);
+                    let newY = file.y + (file.vy * this.speedMultiplier);
+                    let newVx = file.vx;
+                    let newVy = file.vy;
+
+                    if (newX <= 0 || newX >= 85) { // ファイルは少し幅を考慮
+                        newVx = -newVx;
+                        newX = Math.max(0, Math.min(85, newX));
+                    }
+                    if (newY <= 0 || newY >= 85) {
+                        newVy = -newVy;
+                        newY = Math.max(0, Math.min(85, newY));
+                    }
+
+                    return { ...file, x: newX, y: newY, vx: newVx, vy: newVy };
+                });
+
+                // 単語スタイルの更新
+                document.querySelectorAll('.floating-word').forEach(element => {
+                    const wordId = parseInt(element.dataset.wordId);
+                    const word = this.words.find(w => w.id === wordId);
+                    if (word) {
+                        this.updateWordStyle(element, word);
+                    }
+                });
+
+                // ファイルスタイルの更新
+                document.querySelectorAll('.floating-file').forEach(element => {
+                    const fileId = parseInt(element.dataset.fileId);
+                    const file = this.files.find(f => f.id === fileId);
+                    if (file) {
+                        this.updateFileStyle(element, file);
+                    }
+                });
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            startAnimation() {
+                this.animate();
+            }
+
+            saveData() {
+                try {
+                    const data = {
+                        words: this.words,
+                        files: this.files,
+                        deletedWords: this.deletedWords,
+                        autoResetEnabled: this.autoResetEnabled
+                    };
+                    localStorage.setItem('floatingMemoWords', JSON.stringify(data));
+                } catch (e) {
+                    // ファイルデータが大きすぎる場合の処理
+                    console.warn('データが大きすぎて保存できません。');
+                    alert('これ以上はあなたの荷が重いです！\nデータが大きすぎて保存できません。ファイルの一部を削除してください。');
+                }
+            }
+
+            loadData() {
+                try {
+                    const saved = localStorage.getItem('floatingMemoWords');
+                    if (saved) {
+                        const data = JSON.parse(saved);
+                        // 古い形式との互換性を保つ
+                        if (Array.isArray(data)) {
+                            this.words = data;
+                            this.files = [];
+                            this.deletedWords = [];
+                            this.autoResetEnabled = false;
+                        } else {
+                            this.words = data.words || [];
+                            this.files = data.files || [];
+                            this.deletedWords = data.deletedWords || [];
+                            this.autoResetEnabled = data.autoResetEnabled || false;
+                        }
+                    } else {
+                        this.words = [];
+                        this.files = [];
+                        this.deletedWords = [];
+                        this.autoResetEnabled = false;
+                    }
+                    
+                    console.log('データ読み込み完了:', {
+                        words: this.words.length,
+                        files: this.files.length,
+                        deletedWords: this.deletedWords.length,
+                        autoResetEnabled: this.autoResetEnabled
+                    });
+                    
+                } catch (e) {
+                    console.error('データ読み込みエラー:', e);
+                    this.words = [];
+                    this.files = [];
+                    this.deletedWords = [];
+                    this.autoResetEnabled = false;
+                }
+            }
+        }
+
+        // アプリ開始
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                console.log('DOM読み込み完了、アプリ開始');
+                window.app = new FloatingMemoApp();
+                console.log('アプリ開始成功');
+                
+                // ボタンの初期状態を確実に設定
+                setTimeout(() => {
+                    if (window.app) {
+                        window.app.updateAutoResetButton();
+                    }
+                }, 200);
+                
+            } catch (error) {
+                console.error('アプリ開始エラー:', error);
+            }
+        });
+
+        window.addEventListener('load', () => {
+            if (!window.app) {
+                try {
+                    console.log('アプリ再開始');
+                    window.app = new FloatingMemoApp();
+                    setTimeout(() => {
+                        if (window.app) {
+                            window.app.updateAutoResetButton();
+                        }
+                    }, 200);
+                } catch (error) {
+                    console.error('アプリ再開始エラー:', error);
+                }
+            }
+        });
+
+        // デバッグ用関数（F12コンソールで使用可能）
+        window.debugApp = {
+            reset: () => {
+                console.log('デバッグ: リセット実行');
+                return window.app && window.app.resetAll();
+            },
+            toggle: () => {
+                console.log('デバッグ: 切り替え実行');
+                return window.app && window.app.toggleAutoReset();
+            },
+            status: () => {
+                if (window.app) {
+                    const status = {
+                        words: window.app.words.length,
+                        files: window.app.files.length,
+                        deletedWords: window.app.deletedWords.length,
+                        autoReset: window.app.autoResetEnabled
+                    };
+                    console.log('現在の状態:', status);
+                    return status;
+                } else {
+                    console.error('アプリが初期化されていません');
+                }
+            },
+            testButtons: () => {
+                const resetBtn = document.getElementById('resetButton');
+                const toggleBtn = document.getElementById('autoResetToggle');
+                console.log('ボタン要素確認:', {
+                    resetButton: resetBtn,
+                    toggleButton: toggleBtn,
+                    resetHasClick: resetBtn && resetBtn.onclick,
+                    toggleHasClick: toggleBtn && toggleBtn.onclick
+                });
+                return { resetBtn, toggleBtn };
+            },
+            forceClick: () => {
+                console.log('強制クリックテスト');
+                const resetBtn = document.getElementById('resetButton');
+                if (resetBtn) {
+                    resetBtn.click();
+                } else {
+                    console.error('リセットボタンが見つかりません');
+                }
+            }
+        };
+    </script>
+</body>
+</html>
